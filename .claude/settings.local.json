@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs/**)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
