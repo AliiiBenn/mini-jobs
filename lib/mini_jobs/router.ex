@@ -78,7 +78,7 @@ defmodule MiniJobs.Router do
   end
 
   defp json(conn, status, data) when is_integer(status) do
-    body = Jason.encode!(data)
+    body = MiniJobs.Json.encode(data)
     
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/json")

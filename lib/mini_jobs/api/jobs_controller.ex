@@ -135,7 +135,7 @@ defmodule MiniJobs.API.JobsController do
   # Private helpers
 
   defp json(conn, data) do
-    body = Jason.encode!(data)
+    body = MiniJobs.Json.encode(data)
     
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -149,7 +149,7 @@ defmodule MiniJobs.API.JobsController do
       timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
     }
 
-    body = Jason.encode!(error)
+    body = MiniJobs.Json.encode(error)
     
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/json")

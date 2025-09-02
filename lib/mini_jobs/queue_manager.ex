@@ -140,6 +140,7 @@ defmodule MiniJobs.QueueManager do
     end
   end
 
+  @spec list_jobs() :: %{jobs: list(), total: non_neg_integer()}
   @doc """
   List all jobs
   """
