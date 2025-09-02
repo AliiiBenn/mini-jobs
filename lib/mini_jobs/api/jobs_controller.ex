@@ -143,17 +143,17 @@ defmodule MiniJobs.API.JobsController do
   end
 
   defp send_error(conn, status_code, message) do
-    error = %{
-      error: "error",
-      message: message,
-      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
-    }
-
-    body = MiniJobs.Json.encode(error)
-    
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/json")
-    |> Plug.Conn.send_resp(status_code, body)
+    _status_error = status_code |> Atom.to_string() |> String.to_existing_atom()
+    error = case status_code do
+      400 -> MiniJobs.Errors.bad_request(message, %{})
+      401 -> MiniJobs.Errors.unauthorized(message, %{})
+      403 -> MiniJobs.Errors.forbidden(message, %{})
+      404 -> MiniJobs.Errors.not_found(message, %{})
+      422 -> MiniJobs.Errors.unprocessable_entity(message, %{})
+      500 -> MiniJobs.Errors.internal_server_error(message, %{})
+      _ -> MiniJobs.Errors.internal_server_error(message, %{})
+    end
+    MiniJobs.Errors.send_error(conn, error)
   end
 
   # For testing purposes - clear all jobs

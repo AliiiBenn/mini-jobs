@@ -24,27 +24,16 @@ defmodule MiniJobs.Plugs.RequestValidator do
     end
 
   defp send_error_response(conn, status, message) do
-    error = %{
-      error: status_to_string(status),
-      message: message
-    }
-
-    body = Jason.encode!(error)
-    
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/json")
-    |> Plug.Conn.send_resp(status, body)
-  end
-
-  defp status_to_string(status) when is_integer(status) do
-    case status do
-      400 -> "Bad Request"
-      401 -> "Unauthorized"
-      403 -> "Forbidden"
-      404 -> "Not Found"
-      405 -> "Method Not Allowed"
-      500 -> "Internal Server Error"
-      _ -> "Error"
+    error = case status do
+      400 -> MiniJobs.Errors.bad_request(message, %{})
+      401 -> MiniJobs.Errors.unauthorized(message, %{})
+      403 -> MiniJobs.Errors.forbidden(message, %{})
+      404 -> MiniJobs.Errors.not_found(message, %{})
+      405 -> MiniJobs.Errors.method_not_allowed(message, %{})
+      500 -> MiniJobs.Errors.internal_server_error(message, %{})
+      _ -> MiniJobs.Errors.internal_server_error(message, %{})
     end
+    
+    MiniJobs.Errors.send_error(conn, error)
   end
 end

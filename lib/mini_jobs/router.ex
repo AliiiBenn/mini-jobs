@@ -38,12 +38,12 @@ defmodule MiniJobs.Router do
   
   # 404 handler
   match _ do
-    json(conn, 404, %{
-      error: "Not Found",
-      message: "The requested resource was not found",
-      path: conn.request_path,
-      method: conn.method
-    })
+    error = MiniJobs.Errors.resource_not_found(
+      "Resource", 
+      conn.request_path, 
+      details: %{method: conn.method}
+    )
+    MiniJobs.Errors.send_error(conn, error)
   end
 
   defp fetch_query_params_helper(conn, _opts) do
@@ -52,29 +52,16 @@ defmodule MiniJobs.Router do
 
   @impl Plug.ErrorHandler
   def handle_errors(conn, %{kind: kind, reason: reason, stack: stack}) do
-    error_details = if Mix.env() == :dev do
-      %{
-        error: %{
-          status: conn.status,
-          kind: kind,
-          reason: reason,
-          stack: stack,
-          message: Exception.format_stacktrace(stack)
-        },
-        timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
-      }
-    else
-      %{
-        error: %{
-          status: conn.status,
-          kind: kind,
-          message: "Internal server error"
-        },
-        timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
-      }
-    end
+    # Create exception
+    exception = {kind, reason, stack}
+    
+    # Create standardized error response
+    error_response = MiniJobs.Errors.exception_error(
+      exception,
+      request_id: get_in(conn, [:private, :request_id])
+    )
 
-    json(conn, conn.status, error_details)
+    MiniJobs.Errors.send_error(conn, error_response)
   end
 
   defp json(conn, status, data) when is_integer(status) do
