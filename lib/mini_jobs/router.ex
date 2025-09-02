@@ -2,9 +2,12 @@ defmodule MiniJobs.Router do
   use Plug.Router
 
   # Ajouter le pipeline de plugs
-  plug MiniJobs.Plugs.Logger
-  plug MiniJobs.Plugs.JSONParser
+  plug Plug.Logger
+  plug Plug.Parsers, parsers: [:json], json_decoder: Jason
   plug MiniJobs.Plugs.RequestValidator
+  plug Plug.MethodOverride
+  plug Plug.Head
+  plug :fetch_query_params_helper
   plug(:match)
   plug(:dispatch)
 
@@ -18,48 +21,15 @@ defmodule MiniJobs.Router do
   end
 
   # Jobs API
-  post "/api/jobs" do
-    json(conn, :created, %{
-      job_id: generate_job_id(),
-      status: "queued",
-      message: "Job created successfully"
-    })
-  end
+  post "/api/jobs", do: MiniJobs.API.JobsController.create(conn, conn.params)
 
-  get "/api/jobs/:id" do
-    id = conn.path_params["id"]
-    json(conn, 200, %{
-      id: id,
-      status: "running",
-      command: "echo 'hello'",
-      created_at: DateTime.utc_now() |> DateTime.to_iso8601(),
-      started_at: DateTime.utc_now() |> DateTime.add(-5, :second) |> DateTime.to_iso8601()
-    })
-  end
+  get "/api/jobs/:id", do: MiniJobs.API.JobsController.show(conn, conn.path_params)
 
-  get "/api/jobs" do
-    jobs = [
-      %{
-        id: generate_job_id(),
-        status: "pending",
-        command: "echo 'job 1'",
-        created_at: DateTime.utc_now() |> DateTime.to_iso8601()
-      },
-      %{
-        id: generate_job_id(),
-        status: "completed",
-        command: "echo 'job 2'",
-        created_at: DateTime.utc_now() |> DateTime.add(-10, :second) |> DateTime.to_iso8601(),
-        completed_at: DateTime.utc_now() |> DateTime.add(-5, :second) |> DateTime.to_iso8601()
-      }
-    ]
+  get "/api/jobs", do: MiniJobs.API.JobsController.index(conn, conn.params)
 
-    json(conn, 200, %{
-      jobs: jobs,
-      total: length(jobs)
-    })
-  end
-
+  # Jobs deletion
+  delete "/api/jobs/:id", do: MiniJobs.API.JobsController.delete(conn, conn.path_params)
+  
   # 404 handler
   match _ do
     json(conn, 404, %{
@@ -70,7 +40,11 @@ defmodule MiniJobs.Router do
     })
   end
 
-  defp json(conn, status, data) do
+  defp fetch_query_params_helper(conn, _opts) do
+    Plug.Conn.fetch_query_params(conn, [])
+  end
+
+  defp json(conn, status, data) when is_integer(status) do
     body = Jason.encode!(data)
     
     conn
@@ -78,9 +52,4 @@ defmodule MiniJobs.Router do
     |> Plug.Conn.send_resp(status, body)
   end
 
-  defp generate_job_id do
-    DateTime.utc_now() 
-    |> DateTime.to_unix(:microsecond)
-    |> Integer.to_string()
-  end
 end

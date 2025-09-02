@@ -16,6 +16,9 @@ defmodule MiniJobs.Application do
   def start(_type, _args) do
     # Start the main supervisor and cowboy HTTP server
     children = [
+      # Start the job processor (which starts queue manager and worker supervisor)
+      MiniJobs.JobProcessor,
+      
       # Plug.Cowboy HTTP server
       {Plug.Cowboy, scheme: :http, plug: MiniJobs.Router, options: [port: 4001]}
     ]
