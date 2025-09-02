@@ -3,7 +3,13 @@
     "allow": [
       "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs/**)",
       "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs/**)",
-      "Bash(mix phx.server)"
+      "Bash(mix phx.server)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs/**)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs/**)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs\\plugs/**)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\lib\\mini_jobs\\api/**)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs/**)",
+      "Read(c:\\Users\\david\\Documents\\Github\\mini-jobs\\deps\\plug\\lib\\plug/**)"
     ],
     "deny": [],
     "ask": []
