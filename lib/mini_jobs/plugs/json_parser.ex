@@ -13,9 +13,10 @@ defmodule MiniJobs.Plugs.JSONParser do
   end
 
   defp get_content_type(conn) do
-    case get_in(conn.req_headers, ["content-type"]) do
+    # Chercher le content-type dans les headers (liste de tuples)
+    case Enum.find(conn.req_headers, fn {key, _} -> key == "content-type" end) do
       nil -> nil
-      content_type -> 
+      {content_type, _} ->
         # Extraire le type sans les paramètres (ex: "application/json; charset=utf-8")
         content_type
         |> String.split(";")

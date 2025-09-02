@@ -17,7 +17,7 @@ defmodule MiniJobs.Application do
     # Start the main supervisor and cowboy HTTP server
     children = [
       # Plug.Cowboy HTTP server
-      {Plug.Cowboy, scheme: :http, plug: MiniJobs.Router, options: [port: 4000]}
+      {Plug.Cowboy, scheme: :http, plug: MiniJobs.Router, options: [port: 4001]}
     ]
 
     opts = [strategy: :one_for_one, name: MiniJobs.Supervisor]

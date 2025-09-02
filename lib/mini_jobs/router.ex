@@ -9,7 +9,7 @@ defmodule MiniJobs.Router do
   plug(:dispatch)
 
   # Health check
-  match "/health", via: :get do
+  get "/health" do
     json(conn, 200, %{
       status: "healthy",
       timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
@@ -18,7 +18,7 @@ defmodule MiniJobs.Router do
   end
 
   # Jobs API
-  match "/api/jobs", via: :post do
+  post "/api/jobs" do
     json(conn, :created, %{
       job_id: generate_job_id(),
       status: "queued",
@@ -26,7 +26,7 @@ defmodule MiniJobs.Router do
     })
   end
 
-  match "/api/jobs/:id", via: :get do
+  get "/api/jobs/:id" do
     id = conn.path_params["id"]
     json(conn, 200, %{
       id: id,
@@ -37,7 +37,7 @@ defmodule MiniJobs.Router do
     })
   end
 
-  match "/api/jobs", via: :get do
+  get "/api/jobs" do
     jobs = [
       %{
         id: generate_job_id(),
