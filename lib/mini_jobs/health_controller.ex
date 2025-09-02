@@ -11,7 +11,7 @@ defmodule MiniJobs.HealthController do
 
   defp json(conn, status, data) do
     body = Jason.encode!(data)
-    
+
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/json")
     |> Plug.Conn.send_resp(status, body)
