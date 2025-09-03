@@ -30,7 +30,7 @@ defmodule MiniJobs.Errors do
     request_id = Keyword.get(opts, :request_id, nil)
 
     # Get stack trace from current process if available
-    stack = Keyword.get(opts, :stack, Process.info(self(), :current_stacktrace))
+    stack = Keyword.get(opts, :stack, Process.info(self(), :current_stacktrace) || nil)
 
     error_response = %{
       status: status,
@@ -42,8 +42,12 @@ defmodule MiniJobs.Errors do
     }
 
     # Only include stack trace in development
-    if Mix.env() == :dev and stack do
-      _error_response = Map.put(error_response, :stack, Exception.format_stacktrace(stack))
+    if Mix.env() == :dev do
+      if stack do
+        if is_list(stack) do
+          _error_response = Map.put(error_response, :stack, Exception.format_stacktrace(stack))
+        end
+      end
     end
 
     # Add request ID if available
@@ -154,23 +158,51 @@ defmodule MiniJobs.Errors do
   @doc """
   Handle generic errors from exceptions.
   """
-  @spec exception_error(Exception.t(), keyword()) :: map()
+  @spec exception_error(Exception.t() | any(), keyword()) :: map()
   def exception_error(exception, opts \\ []) do
-    message = Exception.message(exception)
-    stack = Keyword.get(opts, :stack, Process.info(self(), :current_stacktrace))
+    # Handle complex exceptions safely
+    message = 
+      case exception do
+        {_kind, _reason, stack} when is_list(stack) ->
+          "#{inspect(stack)}"
+        {kind, reason, _stack} ->
+          "#{inspect(kind)}: #{inspect(reason)}"
+        other ->
+          try do
+            Exception.message(other)
+          rescue
+            _ -> "Unhandled exception: #{inspect(other)}"
+          end
+      end
+    
+    stack = Keyword.get(opts, :stack, Process.info(self(), :current_stacktrace) || nil)
 
     # Generic error for production
     if Mix.env() == :prod do
       internal_server_error(
         "Internal server error",
-        %{"exception" => Exception.format_stacktrace(stack)},
+        %{"exception" => message},
         Keyword.put(opts, :stack, stack)
       )
     else
       # Include more details in development
+      formatted_stack = 
+        if stack do
+          if is_list(stack) do
+            case stack do
+              [{Process, :info, 2, _} | _] -> "Error retrieving stack trace"
+              _ -> Exception.format_stacktrace(stack)
+            end
+          else
+            "Invalid stack trace format"
+          end
+        else
+          "No stack trace available"
+        end
+      
       internal_server_error(
         message,
-        %{"exception" => Exception.format_stacktrace(stack)},
+        %{"exception" => formatted_stack},
         Keyword.put(opts, :stack, stack)
       )
     end

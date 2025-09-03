@@ -47,7 +47,8 @@ defmodule MiniJobs.Router do
   end
 
   defp fetch_query_params_helper(conn, _opts) do
-    Plug.Conn.fetch_query_params(conn, [])
+    conn
+    |> Plug.Conn.fetch_query_params()
   end
 
   @impl Plug.ErrorHandler
@@ -55,10 +56,13 @@ defmodule MiniJobs.Router do
     # Create exception
     exception = {kind, reason, stack}
     
+    # Get request_id safely or use nil
+    request_id = Map.get(conn.private, :request_id)
+    
     # Create standardized error response
     error_response = MiniJobs.Errors.exception_error(
       exception,
-      request_id: get_in(conn, [:private, :request_id])
+      request_id: request_id
     )
 
     MiniJobs.Errors.send_error(conn, error_response)

@@ -64,7 +64,7 @@ defmodule MiniJobs.JobValidation do
   - `query_params`: Map containing query parameters with keys:
     - `limit` (optional): Maximum number of jobs to return (1-1000), defaults to 100
     - `offset` (optional): Number of jobs to skip for pagination (≥ 0), defaults to 0
-    - `status` (optional): Filter by job status, one of #{inspect(job_statuses())}, defaults to all
+    - `status` (optional): Filter by job status, one of [:queued, :running, :completed, :failed, :cancelled], defaults to all
   
   ## Returns
   - {:ok, validated_params} if validation passes
@@ -129,8 +129,12 @@ defmodule MiniJobs.JobValidation do
     case Map.get(params, "command") do
       nil ->
         [{:command, "Command is required"} | errors]
-      command when is_binary(command) and String.trim(command) != "" ->
-        errors
+      command when is_binary(command) ->
+        if String.trim(command) != "" do
+          errors
+        else
+          [{:command, "Command must be a non-empty string"} | errors]
+        end
       _ ->
         [{:command, "Command must be a non-empty string"} | errors]
     end
@@ -142,10 +146,19 @@ defmodule MiniJobs.JobValidation do
         # Use default, no error
         errors
       priority ->
-        if priority in job_priorities() do
-          errors
+        if is_binary(priority) do
+          atom_priority = String.to_existing_atom(priority)
+          if atom_priority in job_priorities() do
+            errors
+          else
+            [{:priority, "Priority must be one of: #{inspect(job_priorities())}"} | errors]
+          end
         else
-          [{:priority, "Priority must be one of: #{inspect(job_priorities())}"} | errors]
+          if priority in job_priorities() do
+            errors
+          else
+            [{:priority, "Priority must be one of: #{inspect(job_priorities())}"} | errors]
+          end
         end
     end
   end
@@ -250,20 +263,20 @@ defmodule MiniJobs.JobValidation do
         # Use default, no error
         errors
       status when is_atom(status) ->
-        if status in job_statuses() do
+        if status in [:queued, :running, :completed, :failed, :cancelled] do
           errors
         else
-          [{:status, "Status must be one of: #{inspect(job_statuses())}"} | errors]
+          [{:status, "Status must be one of: [:queued, :running, :completed, :failed, :cancelled]"} | errors]
         end
       status when is_binary(status) ->
         case String.to_existing_atom(status) do
-          atom when atom in job_statuses() ->
+          atom when atom in [:queued, :running, :completed, :failed, :cancelled] ->
             errors
           _ ->
-            [{:status, "Status must be one of: #{inspect(job_statuses())}"} | errors]
+            [{:status, "Status must be one of: [:queued, :running, :completed, :failed, :cancelled]"} | errors]
         end
       _ ->
-        [{:status, "Status must be one of: #{inspect(job_statuses())}"} | errors]
+        [{:status, "Status must be one of: [:queued, :running, :completed, :failed, :cancelled]"} | errors]
     end
   end
 
@@ -342,12 +355,14 @@ defmodule MiniJobs.JobValidation do
   # Helper to normalize status with validation
   defp normalize_status(nil), do: nil
   defp normalize_status(status) when is_atom(status) do
-    if status in job_statuses(), do: status, else: nil
+    valid_statuses = [:queued, :running, :completed, :failed, :cancelled]
+    if status in valid_statuses, do: status, else: nil
   end
   defp normalize_status(status) when is_binary(status) do
     case String.to_existing_atom(status) do
-      atom when atom in job_statuses() -> atom
-      _ -> nil
+      atom ->
+        valid_statuses = [:queued, :running, :completed, :failed, :cancelled]
+        if atom in valid_statuses, do: atom, else: nil
     end
   rescue
     ArgumentError -> nil

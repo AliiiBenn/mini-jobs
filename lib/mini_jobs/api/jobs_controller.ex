@@ -41,7 +41,6 @@ defmodule MiniJobs.API.JobsController do
         MiniJobs.Errors.send_error(conn, error)
     end
   end
-  end
 
   def show(conn, %{"id" => id}) do
     request_id = generate_request_id()

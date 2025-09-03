@@ -41,9 +41,6 @@ defmodule MiniJobs.Plugs.RequestValidator do
           _ -> {:ok, conn}
         end
       
-      "/health" ->
-        validate_health_request(conn)
-      
       _ ->
         {:ok, conn}
     end
@@ -54,7 +51,7 @@ defmodule MiniJobs.Plugs.RequestValidator do
     case conn.body_params do
       %{} when map_size(conn.body_params) > 0 ->
         MiniJobs.JobValidation.validate_job_creation(conn.body_params)
-      %{} ->
+      %{} when map_size(conn.body_params) == 0 ->
         {:error, Errors.bad_request("Request body is required")}
       _ ->
         {:error, Errors.bad_request("Invalid request body format")}
@@ -69,7 +66,7 @@ defmodule MiniJobs.Plugs.RequestValidator do
   defp validate_job_deletion_request(conn) do
     # Valider que l'ID du job est présent et valide
     with {:ok, job_id} <- Map.fetch(conn.path_params, "id"),
-         {:ok, validated_id} <- MiniJobs.JobValidation.validate_job_id(job_id) do
+         {:ok, _validated_id} <- MiniJobs.JobValidation.validate_job_id(job_id) do
       {:ok, conn}
     else
       :error ->
@@ -79,14 +76,9 @@ defmodule MiniJobs.Plugs.RequestValidator do
     end
   end
 
-  defp validate_health_request(conn) do
-    # Le endpoint health n'a pas besoin de validation complexe
-    {:ok, conn}
-  end
-
   defp send_error_response(conn, error) do
     # S'assurer que l'erreur a un statut valide
-    error_with_status = Map.get(error, :status, 400)
+    _error_with_status = Map.get(error, :status, 400)
     
     conn
     |> Errors.send_error(error)
