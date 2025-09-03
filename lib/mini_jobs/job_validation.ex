@@ -31,7 +31,11 @@ defmodule MiniJobs.JobValidation do
   Validate job creation parameters.
   
   ## Parameters
-  - `params`: Map containing job parameters
+  - `params`: Map containing job parameters with keys:
+    - `command` (required): Command string to execute
+    - `priority` (optional): Priority level (:high, :normal, :low), defaults to :normal
+    - `timeout` (optional): Timeout in milliseconds, defaults to 30000
+    - `max_retries` (optional): Maximum retry count, defaults to 3
   
   ## Returns
   - {:ok, validated_params} if validation passes
@@ -253,11 +257,38 @@ defmodule MiniJobs.JobValidation do
   defp extract_validated_params(params) do
     %{
       command: Map.get(params, "command"),
-      priority: Map.get(params, "priority") || :normal,
-      timeout: Map.get(params, "timeout") || 30_000,
-      max_retries: Map.get(params, "max_retries") || 3
+      priority: normalize_priority(Map.get(params, "priority")),
+      timeout: normalize_timeout(Map.get(params, "timeout")),
+      max_retries: normalize_max_retries(Map.get(params, "max_retries"))
     }
   end
+
+  # Helper to normalize priority with validation
+  defp normalize_priority(nil), do: :normal
+  defp normalize_priority(priority) when is_atom(priority), do: priority
+  defp normalize_priority(priority) when is_binary(priority), do: String.to_existing_atom(priority)
+
+  # Helper to normalize timeout with validation
+  defp normalize_timeout(nil), do: 30_000
+  defp normalize_timeout(timeout) when is_integer(timeout) and timeout > 0, do: timeout
+  defp normalize_timeout(timeout) when is_binary(timeout) do
+    case Integer.parse(timeout) do
+      {num, ""} when num > 0 -> num
+      _ -> 30_000  # fallback to default
+    end
+  end
+  defp normalize_timeout(_), do: 30_000  # fallback to default
+
+  # Helper to normalize max_retries with validation
+  defp normalize_max_retries(nil), do: 3
+  defp normalize_max_retries(max_retries) when is_integer(max_retries) and max_retries >= 0, do: max_retries
+  defp normalize_max_retries(max_retries) when is_binary(max_retries) do
+    case Integer.parse(max_retries) do
+      {num, ""} when num >= 0 -> num
+      _ -> 3  # fallback to default
+    end
+  end
+  defp normalize_max_retries(_), do: 3  # fallback to default
 
   defp extract_validated_query_params(query_params) do
     %{
