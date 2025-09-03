@@ -61,7 +61,10 @@ defmodule MiniJobs.JobValidation do
   Validate query parameters for job listing.
   
   ## Parameters
-  - `query_params`: Map containing query parameters
+  - `query_params`: Map containing query parameters with keys:
+    - `limit` (optional): Maximum number of jobs to return (1-1000), defaults to 100
+    - `offset` (optional): Number of jobs to skip for pagination (≥ 0), defaults to 0
+    - `status` (optional): Filter by job status, one of #{inspect(job_statuses())}, defaults to all
   
   ## Returns
   - {:ok, validated_params} if validation passes
@@ -91,6 +94,16 @@ defmodule MiniJobs.JobValidation do
   ## Returns
   - {:ok, id} if valid
   - {:error, %{message: String.t()}} if invalid
+  
+  ## Examples
+      iex> validate_job_id("abc123")
+      {:ok, "abc123"}
+      
+      iex> validate_job_id("")
+      {:error, %{message: "Job ID cannot be empty"}}
+      
+      iex> validate_job_id(nil)
+      {:error, %{message: "Job ID is required"}}
   """
   @spec validate_job_id(String.t() | nil) :: {:ok, String.t()} | {:error, map()}
   def validate_job_id(nil) do
@@ -292,25 +305,52 @@ defmodule MiniJobs.JobValidation do
 
   defp extract_validated_query_params(query_params) do
     %{
-      limit: parse_integer(get_in(query_params, ["limit"]) || "100", 100)
-        |> min(1000)
-        |> max(1),
-      offset: parse_integer(get_in(query_params, ["offset"]) || "0", 0)
-        |> max(0),
-      status: case get_in(query_params, ["status"]) do
-        nil -> nil
-        s when is_binary(s) -> String.to_existing_atom(s)
-        s when is_atom(s) -> s
-      end
+      limit: normalize_limit(get_in(query_params, ["limit"])),
+      offset: normalize_offset(get_in(query_params, ["offset"])),
+      status: normalize_status(get_in(query_params, ["status"]))
     }
   end
 
-  defp parse_integer(binary, default) when is_binary(binary) do
-    case Integer.parse(binary) do
-      {num, ""} -> num
-      _ -> default
+  # Helper to normalize limit with validation
+  defp normalize_limit(nil), do: 100
+  defp normalize_limit(limit) when is_integer(limit) do
+    cond do
+      limit < 1 -> 1
+      limit > 1000 -> 1000
+      true -> limit
     end
   end
+  defp normalize_limit(limit) when is_binary(limit) do
+    case Integer.parse(limit) do
+      {num, ""} -> normalize_limit(num)
+      _ -> 100  # fallback to default
+    end
+  end
+  defp normalize_limit(_), do: 100  # fallback to default
 
-  defp parse_integer(integer, _default) when is_integer(integer), do: integer
+  # Helper to normalize offset with validation
+  defp normalize_offset(nil), do: 0
+  defp normalize_offset(offset) when is_integer(offset) and offset >= 0, do: offset
+  defp normalize_offset(offset) when is_binary(offset) do
+    case Integer.parse(offset) do
+      {num, ""} when num >= 0 -> num
+      _ -> 0  # fallback to default
+    end
+  end
+  defp normalize_offset(_), do: 0  # fallback to default
+
+  # Helper to normalize status with validation
+  defp normalize_status(nil), do: nil
+  defp normalize_status(status) when is_atom(status) do
+    if status in job_statuses(), do: status, else: nil
+  end
+  defp normalize_status(status) when is_binary(status) do
+    case String.to_existing_atom(status) do
+      atom when atom in job_statuses() -> atom
+      _ -> nil
+    end
+  rescue
+    ArgumentError -> nil
+  end
+  defp normalize_status(_), do: nil  # fallback to default
 end
