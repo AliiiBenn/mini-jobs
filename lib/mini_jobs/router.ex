@@ -1,5 +1,11 @@
 defmodule MiniJobs.Router do
   use Plug.Router
+  use Plug.ErrorHandler
+
+  # Add conditional Plug.Debugger only in development
+  if Mix.env() == :dev do
+    use Plug.Debugger, otp_app: :mini_jobs
+  end
 
   # Ajouter le pipeline de plugs
   plug Plug.Logger
@@ -32,20 +38,38 @@ defmodule MiniJobs.Router do
   
   # 404 handler
   match _ do
-    json(conn, 404, %{
-      error: "Not Found",
-      message: "The requested resource was not found",
-      path: conn.request_path,
-      method: conn.method
-    })
+    error = MiniJobs.Errors.resource_not_found(
+      "Resource", 
+      conn.request_path, 
+      details: %{method: conn.method}
+    )
+    MiniJobs.Errors.send_error(conn, error)
   end
 
   defp fetch_query_params_helper(conn, _opts) do
-    Plug.Conn.fetch_query_params(conn, [])
+    conn
+    |> Plug.Conn.fetch_query_params()
+  end
+
+  @impl Plug.ErrorHandler
+  def handle_errors(conn, %{kind: kind, reason: reason, stack: stack}) do
+    # Create exception
+    exception = {kind, reason, stack}
+    
+    # Get request_id safely or use nil
+    request_id = Map.get(conn.private, :request_id)
+    
+    # Create standardized error response
+    error_response = MiniJobs.Errors.exception_error(
+      exception,
+      request_id: request_id
+    )
+
+    MiniJobs.Errors.send_error(conn, error_response)
   end
 
   defp json(conn, status, data) when is_integer(status) do
-    body = Jason.encode!(data)
+    body = MiniJobs.Json.encode(data)
     
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/json")

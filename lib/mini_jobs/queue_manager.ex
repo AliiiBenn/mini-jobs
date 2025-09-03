@@ -13,17 +13,17 @@ defmodule MiniJobs.QueueManager do
   def init(_opts) do
     # Create ETS tables if they don't exist
     :ets.new(:job_queue, [
-      :public, 
-      :ordered_set, 
-      :named_table, 
+      :public,
+      :ordered_set,
+      :named_table,
       :protected,
       {:write_concurrency, true}
     ])
-    
+
     :ets.new(:job_registry, [
-      :public, 
-      :bag, 
-      :named_table, 
+      :public,
+      :bag,
+      :named_table,
       :protected
     ])
 
@@ -61,7 +61,7 @@ defmodule MiniJobs.QueueManager do
     :ets.insert(:job_registry, {job.id, job.status, job})
 
     Logger.info("Job enqueued: #{job_id} with priority #{priority}")
-    
+
     {:ok, job_id}
   end
 
@@ -73,15 +73,14 @@ defmodule MiniJobs.QueueManager do
     case find_next_pending_job() do
       {job_id, job_data} ->
         job = %{job_data | status: :running, started_at: DateTime.utc_now()}
-        
+
         # Update in both tables
         :ets.insert(:job_queue, {job_id, job})
         :ets.insert(:job_registry, {job.id, job.status, job})
-        
+
         Logger.info("Job dequeued: #{job_id}")
         {:ok, job}
       nil ->
-        Logger.debug("No jobs available in queue")
         {:error, :empty_queue}
     end
   end
@@ -115,15 +114,15 @@ defmodule MiniJobs.QueueManager do
   def update_job_status(job_id, status) when status in @job_statuses do
     case :ets.lookup(:job_queue, job_id) do
       [{^job_id, job}] ->
-        updated_job = %{job | 
-          status: status, 
+        updated_job = %{job |
+          status: status,
           completed_at: if(status in [:completed, :failed, :cancelled], do: DateTime.utc_now(), else: nil),
           started_at: if(status == :running, do: DateTime.utc_now(), else: job.started_at)
         }
-        
+
         :ets.insert(:job_queue, {job_id, updated_job})
         :ets.insert(:job_registry, {updated_job.id, updated_job.status, updated_job})
-        
+
         Logger.info("Job #{job_id} status updated to #{status}")
         {:ok, updated_job}
       [] ->
@@ -141,6 +140,7 @@ defmodule MiniJobs.QueueManager do
     end
   end
 
+  @spec list_jobs() :: %{jobs: list(), total: non_neg_integer()}
   @doc """
   List all jobs
   """
@@ -151,7 +151,7 @@ defmodule MiniJobs.QueueManager do
 
     # Get all jobs and filter by status if specified
     all_jobs = :ets.tab2list(:job_queue)
-    
+
     filtered_jobs = case status do
       nil -> all_jobs
       s -> Enum.filter(all_jobs, fn {_job_id, job} -> job.status == s end)
@@ -173,13 +173,13 @@ defmodule MiniJobs.QueueManager do
     # Get all pending jobs and sort by priority and creation time
     all_jobs = :ets.tab2list(:job_queue)
     |> Enum.filter(fn {_job_id, job} -> job.status == :pending end)
-    |> Enum.sort_by(fn {_job_id, job} -> 
+    |> Enum.sort_by(fn {_job_id, job} ->
       # Sort by priority (high: 0, normal: 1, low: 2) then by creation time (oldest first)
       priority_order = %{high: 0, normal: 1, low: 2}
       {priority_order[job.priority], job.created_at}
     end)
     |> List.first()
-    
+
     case all_jobs do
       {job_id, job} -> {job_id, job}
       nil -> nil
