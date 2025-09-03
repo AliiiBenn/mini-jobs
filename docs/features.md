@@ -60,6 +60,36 @@
 - `feature/supervision-improved` - Enhanced supervision tree
 - `feature/config-management` - Centralized configuration system
 
+### Background Jobs
+- `feature/recurring-tasks` - Support for recurring/scheduled tasks
+  - **Description**: Add ability to schedule jobs that run on a recurring basis (cron-like scheduling)
+  - **Benefits**:
+    - Automate periodic tasks
+    - Maintain system health through scheduled cleanup
+    - Support for time-based job triggers
+  - **Tasks**:
+    - Implement cron-like scheduling system
+    - Add recurring job definitions to API
+    - Create scheduler process for managing recurring jobs
+    - Handle timezone and daylight saving time
+    - Implement pause/resume functionality for recurring jobs
+
+### Data Persistence
+- `feature/sqlite-persistence` - SQLite database for persistent job storage
+  - **Description**: Replace in-memory storage with SQLite for job persistence
+  - **Benefits**:
+    - Jobs survive server restarts
+    - Data integrity with transactions
+    - No data loss on shutdown
+    - Easier debugging and inspection
+  - **Tasks**:
+    - Set up Ecto with SQLite database
+    - Create Job schema and migrations
+    - Implement repository pattern for data access
+    - Add database health checks
+    - Handle database connection failures gracefully
+    - Support for database backups and restoration
+
 ### Security
 - `feature/request-validation` - Comprehensive request validation
 - `feature/security-headers` - Security headers (CSP, XSS protection)
@@ -75,6 +105,8 @@
 ### API Improvements
 - `feature/ecto-validation` - Ecto schema validation
 - `feature/api-documentation` - API documentation (OpenAPI/Swagger)
+- `feature/recurring-tasks` - Support for recurring/scheduled tasks
+- `feature/sqlite-persistence` - SQLite database for persistent job storage
 
 ### Code Quality
 - `feature/test-suite` - Comprehensive test suite

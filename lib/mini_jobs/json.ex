@@ -75,7 +75,7 @@ defmodule MiniJobs.Json do
     # Max depth reached
     Logger.warning("Max encoding depth (#{@max_encoding_depth}) reached in JSON encoding")
     Jason.encode!(%{
-      "error" => "Internal Server Error", 
+      "error" => "Internal Server Error",
       "message" => "Data too complex to encode (max depth: #{@max_encoding_depth})",
       "max_size" => @max_response_size
     })
